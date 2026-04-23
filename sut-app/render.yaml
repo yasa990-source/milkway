@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: sut-app
+    env: static
+    rootDir: sut-app
+    buildCommand: npm ci && npm run build:web
+    staticPublishPath: dist
