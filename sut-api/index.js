@@ -15,6 +15,14 @@ app.get('/health', (req, res) => {
   res.status(200).json({ ok: true });
 });
 
+app.post('/sync/events', (req, res) => {
+  const events = Array.isArray(req.body?.events) ? req.body.events : [];
+  res.status(200).json({
+    accepted: events.length,
+    receivedAt: new Date().toISOString(),
+  });
+});
+
 app.listen(port, () => {
   console.log(`Server çalışıyor: http://localhost:${port}`);
 });

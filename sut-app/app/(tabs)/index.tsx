@@ -1,4 +1,8 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback } from 'react';
+
+import { useOfflineSync } from '@/hooks/use-offline-sync';
+import { enqueueAction, OfflineActionType } from '@/services/offline-queue';
 
 const kpiCards = [
   { title: 'Toplanan Süt', value: '8.420 L', change: '+12%', tone: '#22c55e' },
@@ -15,10 +19,31 @@ const pickups = [
 ];
 
 export default function HomeScreen() {
+  const { isOnline, queueSize, lastSyncAt, syncError, refreshQueueSize, mapActionPayload } =
+    useOfflineSync();
+
+  const handleOfflineAction = useCallback(
+    async (type: OfflineActionType) => {
+      await enqueueAction({
+        type,
+        payload: mapActionPayload(type),
+      });
+      await refreshQueueSize();
+    },
+    [mapActionPayload, refreshQueueSize],
+  );
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.pageTitle}>Admin Dashboard</Text>
       <Text style={styles.pageSubtitle}>Süt toplama ve kabul operasyonu - günlük özet</Text>
+      <View style={[styles.offlineCard, isOnline ? styles.onlineCard : styles.offlineModeCard]}>
+        <Text style={styles.offlineTitle}>
+          {isOnline ? 'Baglanti aktif' : 'Offline mod aktif'} - Bekleyen islem: {queueSize}
+        </Text>
+        {lastSyncAt ? <Text style={styles.offlineMeta}>Son senkron: {lastSyncAt}</Text> : null}
+        {syncError ? <Text style={styles.offlineError}>{syncError}</Text> : null}
+      </View>
 
       <View style={styles.kpiGrid}>
         {kpiCards.map((card) => (
@@ -33,13 +58,13 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Hızlı Aksiyonlar</Text>
         <View style={styles.actionRow}>
-          <Pressable style={styles.actionButton}>
+          <Pressable style={styles.actionButton} onPress={() => void handleOfflineAction('create_route')}>
             <Text style={styles.actionText}>Rota Oluştur</Text>
           </Pressable>
-          <Pressable style={styles.actionButton}>
+          <Pressable style={styles.actionButton} onPress={() => void handleOfflineAction('assign_driver')}>
             <Text style={styles.actionText}>Şoför Ata</Text>
           </Pressable>
-          <Pressable style={styles.actionButton}>
+          <Pressable style={styles.actionButton} onPress={() => void handleOfflineAction('open_acceptance')}>
             <Text style={styles.actionText}>Kabul Aç</Text>
           </Pressable>
         </View>
@@ -92,6 +117,33 @@ const styles = StyleSheet.create({
     marginTop: 4,
     color: '#cbd5e1',
     fontSize: 14,
+  },
+  offlineCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    gap: 4,
+  },
+  onlineCard: {
+    borderColor: '#14532d',
+    backgroundColor: '#052e16',
+  },
+  offlineModeCard: {
+    borderColor: '#7c2d12',
+    backgroundColor: '#431407',
+  },
+  offlineTitle: {
+    color: '#e2e8f0',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  offlineMeta: {
+    color: '#94a3b8',
+    fontSize: 12,
+  },
+  offlineError: {
+    color: '#fca5a5',
+    fontSize: 12,
   },
   kpiGrid: {
     marginTop: 8,
